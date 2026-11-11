@@ -1,0 +1,30 @@
+{
+  "description": "Ubuntu is a Linux distribution based on Debian. PREBUILT OFFICIAL KASM IMAGE for the same distribution as the owner's ISO ubuntu-24.04.3-desktop-amd64.iso. It is not built from, extracted from or equivalent to that ISO: shared host kernel, no installer/bootloader/live-boot.",
+  "docker_registry": "https://index.docker.io/v1/",
+  "image_src": "ubuntu.png",
+  "run_config": {
+    "hostname": "kasm"
+  },
+  "categories": [
+    "Desktop",
+    "Productivity",
+    "Development"
+  ],
+  "friendly_name": "Ubuntu 24.04 Noble (Bootyhole)",
+  "architecture": [
+    "amd64"
+  ],
+  "compatibility": [
+    {
+      "version": "1.19.x",
+      "image": "kasmweb/ubuntu-noble-desktop:1.19.0-rolling-weekly",
+      "uncompressed_size_mb": 4044,
+      "available_tags": [
+        "1.19.0",
+        "1.19.0-rolling-weekly",
+        "1.19.0-rolling-daily"
+      ]
+    }
+  ],
+  "notes": "The Kasm Ubuntu Noble Workspace requires libseccomp => 2.5.3 to run.\n\nThis can be checked by running runc --version\n\nIf you still want to run Ubuntu Noble but do not have the minimum required libseccomp version, it can be run in an unsecure manner by adding: {\"security_opt\":[\"seccomp=unconfined\"]} to the Docker Run Config Override (JSON) setting above.\n\nNOTE: This will run the Workspace without the docker seccomp sandbox and will significantly reduce the amount of protection that Kasm Workspaces can provide.\n"
+}

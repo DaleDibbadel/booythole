@@ -1,0 +1,30 @@
+{
+  "description": "Fedora Linux aims to be on the leading edge of open-source technologies. It is the upstream source for Red Hat Enterprise Linux. PREBUILT OFFICIAL KASM IMAGE for the same distribution as the owner's ISO Fedora-Server-dvd-x86_64-42-1.1.iso (the ISO is the Server edition; this is the related desktop edition). It is not built from, extracted from or equivalent to that ISO: shared host kernel, no installer/bootloader/live-boot.",
+  "docker_registry": "https://index.docker.io/v1/",
+  "image_src": "fedora.svg",
+  "run_config": {
+    "hostname": "kasm"
+  },
+  "categories": [
+    "Desktop",
+    "Productivity",
+    "Development"
+  ],
+  "friendly_name": "Fedora 42 (desktop) (Bootyhole)",
+  "architecture": [
+    "amd64"
+  ],
+  "compatibility": [
+    {
+      "version": "1.19.x",
+      "image": "kasmweb/fedora-42-desktop:1.19.0-rolling-weekly",
+      "uncompressed_size_mb": 3753,
+      "available_tags": [
+        "1.19.0",
+        "1.19.0-rolling-weekly",
+        "1.19.0-rolling-daily"
+      ]
+    }
+  ],
+  "notes": "The Kasm Fedora 42 Workspace requires libseccomp => 2.5.3 to run.\n\nThis can be checked by running runc --version\n\nIf you still want to run Fedora 42 but do not have the minimum required libseccomp version, it can be run in an unsecure manner by adding: {\"security_opt\":[\"seccomp=unconfined\"]} to the Docker Run Config Override (JSON) setting above.\n\nNOTE: This will run the Workspace without the docker seccomp sandbox and will significantly reduce the amount of protection that Kasm Workspaces can provide.\n"
+}

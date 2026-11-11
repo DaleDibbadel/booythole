@@ -1,0 +1,30 @@
+{
+  "description": "Kali Linux is a Debian-derived Linux distribution designed for digital forensics and penetration testing. PREBUILT OFFICIAL KASM IMAGE for the same distribution as the owner's ISO kali-linux-2024.1-live-amd64.iso (Kali; this image is the current rolling release, not 2024.1). It is not built from, extracted from or equivalent to that ISO: shared host kernel, no installer/bootloader/live-boot.",
+  "docker_registry": "https://index.docker.io/v1/",
+  "image_src": "kali.png",
+  "run_config": {
+    "hostname": "kasm"
+  },
+  "categories": [
+    "Desktop",
+    "Security",
+    "Development"
+  ],
+  "friendly_name": "Kali Linux (rolling) (Bootyhole)",
+  "architecture": [
+    "amd64"
+  ],
+  "compatibility": [
+    {
+      "version": "1.19.x",
+      "image": "kasmweb/kali-rolling-desktop:1.19.0-rolling-weekly",
+      "uncompressed_size_mb": 4220,
+      "available_tags": [
+        "1.19.0",
+        "1.19.0-rolling-weekly",
+        "1.19.0-rolling-daily"
+      ]
+    }
+  ],
+  "notes": "The Kasm Kali Linux Workspace requires libseccomp => 2.5.3 to run.\n\nThis can be checked by running runc --version\n\nIf you still want to run Kali Linux but do not have the minimum required libseccomp version, it can be run in an unsecure manner by configuring the Docker Run Config Override and Docker Exec Config (JSON) settings above according to the instructions in this article: https://kasmweb.atlassian.net/wiki/x/DgDHMg\n\nNOTE: This will run the Workspace with runtime security modifications and will significantly reduce the amount of protection that Kasm Workspaces can provide.\n\n\nThis image includes software that may not function properly unless the Kasm session is executed with elevated privileges.\n\nPlease see the following documentation for configuring the image to run as root, utilize sudo, or other custom privileges.\n\nhttps://kasmweb.com/docs/latest/how_to/running_as_root.html"
+}
