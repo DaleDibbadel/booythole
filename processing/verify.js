@@ -1,5 +1,6 @@
 // Fails (exit 1) unless the built catalog is complete and sane. Usage: node processing/verify.js <publicDir> <schema>
 const fs = require("fs"), path = require("path");
+const { validImageRef } = require("./imageref");
 const [pub, schema] = process.argv.slice(2);
 const fail = (m) => { console.error("VERIFY FAILED: " + m); process.exit(1); };
 const list = path.join(pub, schema, "list.json");
@@ -12,8 +13,11 @@ if (j.list_url !== "https://daledibbadel.github.io/booythole/") fail("list_url "
 for (const w of j.workspaces) {
   if (!w.friendly_name || !w.description || !w.image_src) fail("incomplete entry " + JSON.stringify(w.friendly_name));
   if (!fs.existsSync(path.join(pub, schema, "icons", w.image_src))) fail("missing icon " + w.image_src);
-  if (!(w.compatibility || []).some(c => c.version === "1.19.x" && /^kasmweb\/[a-z0-9-]+:[A-Za-z0-9._-]+$/.test(c.image))) fail("no 1.19.x compatibility with a kasmweb image in " + w.friendly_name);
-  if (/TornBrowser|\bTails\b/i.test(w.friendly_name) && /tor/i.test(w.friendly_name)) fail("Tor entry must not be named Tails: " + w.friendly_name);
+  const comp = (w.compatibility || []).filter(c => c.version === "1.19.x");
+  if (!comp.length) fail("no 1.19.x compatibility in " + w.friendly_name);
+  for (const c of w.compatibility) if (!validImageRef(c.image)) fail(`image reference not valid/pinned/allowed in ${w.friendly_name}: ${c.image}`);
+  if (/tails/i.test(w.friendly_name) && !/unofficial|prototype/i.test(w.friendly_name)) fail("a Tails-named entry must say unofficial/prototype: " + w.friendly_name);
+  if (/\btor browser\b/i.test(w.friendly_name) && /tails/i.test(w.friendly_name + " " + w.description)) fail("Tor Browser must not be described as Tails: " + w.friendly_name);
 }
 const text = fs.readFileSync(list, "utf8");
 if (/\b(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)\b/.test(text)) fail("private address in catalog");

@@ -1,20 +1,17 @@
-# Bootyhole: Kasm Workspace Registry
+# Bootyhole: personal Kasm Workspace Registry
 
-A small Kasm Workspaces registry (schema 1.1, Kasm 1.19.x) with generic workspace definitions only.
-Catalog URL to add in Kasm (Admin > Workspaces > Registry): `https://daledibbadel.github.io/booythole/`
+Registry for Kasm Workspaces (schema 1.1, Kasm 1.19.x). Catalog URL to add in Kasm: `https://daledibbadel.github.io/booythole/`
 
-| Workspace | Image (Docker Hub) | Notes |
+## Published workspaces
+| Workspace | Image | Notes |
 |---|---|---|
-| Tor Browser | `kasmweb/tor-browser:1.19.0-rolling-weekly` | The Tor Browser. It is not Tails. |
-| Ubuntu Desktop | `kasmweb/ubuntu-jammy-desktop:1.19.0-rolling-weekly` | Ubuntu 22.04 desktop |
-| FileZilla | `kasmweb/filezilla:1.19.0-rolling-weekly` | FTP/SFTP client |
+| Tor Browser (Bootyhole) | `kasmweb/tor-browser:1.19.0-rolling-weekly` | The Tor Browser. It is not Tails. |
 
-A registry lists Docker images. It cannot boot ISO files, run Windows, or provide Tails (which needs its own kernel).
+## In progress (not published)
+Workspaces built from the owner's own ISO media (Tails first, then other Linux media) are unfinished experiments. Nothing is listed until a custom image has been built from its source, launched through Kasm and tested. A registry lists Docker images; it cannot boot ISO files, run Windows, or provide Tails' kernel-level protections.
 
 ## Build
-`./build.sh` (Node 20; `npm ci --prefix processing && npm ci --prefix site` first). It stops on the first failure and ends with
-`node processing/verify.js`, which fails unless the catalog is complete (names, icons, `1.19.x` compatibility, no private addresses or credential words).
-GitHub Actions (`.github/workflows/build-and-deploy.yml`) runs it on every push to branch `1.1` and publishes `public/` to `gh-pages`.
+`./build.sh` (Node 20; `(cd processing && npm ci)` and `(cd site && npm ci)` first) stops on the first failure: image-reference self-test, catalog build, site export, then `node processing/verify.js` (names, icons, `1.19.x` compatibility, pinned image references under an allowed namespace, no private addresses or credential words). GitHub Actions publishes `public/` to `gh-pages` on every push to branch `1.1`.
 
 ## Adding a workspace
-Create `workspaces/<Name>/workspace.json` plus its icon (schema in `workspaces/README.md`), commit to `1.1`.
+Create `workspaces/<Name>/workspace.json` plus its icon, add the owner's image namespace to `processing/imageref.js` if needed, commit to `1.1`.

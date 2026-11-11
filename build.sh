@@ -5,6 +5,7 @@
 set -euo pipefail
 SCHEMA="1.1"                              # Kasm registry schema version; must match basePath in site/next.config.js
 grep -q "basePath: '/booythole/${SCHEMA}'" site/next.config.js || { echo "basePath in site/next.config.js is not /booythole/${SCHEMA}" >&2; exit 1; }
+node processing/imageref.test.js            # image-reference validator self-test (accepts owner images, refuses malformed ones)
 rm -rf public base process
 node processing                           # writes ./public/list.json, versions.json, icons/ (async; verified below)
 test -s public/list.json || { echo "processing produced no list.json" >&2; exit 1; }
