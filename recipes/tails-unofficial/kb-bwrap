@@ -1,31 +1,19 @@
 #!/usr/bin/python3
-"""kbtails bwrap shim (FLATPAK_BWRAP). Docker's masked /proc paths make 'mount a fresh procfs' impossible inside an unprivileged container
-(kernel mount_too_revealing), and Kasm's docker-py cannot unmask them. This shim rewrites flatpak's bubblewrap arguments:
-  --proc DEST        ->  --bind /proc DEST     (the container's own /proc)
-  --unshare-pid      ->  dropped               (a bind of the container's /proc is only coherent inside the container's PID namespace)
-  --disable-userns   ->  dropped               (it writes /proc/sys/user/max_user_namespaces, which Docker mounts read-only)
-Everything else (user and mount namespaces, IPC/UTS, seccomp, read-only runtime, filesystem permissions) is unchanged."""
+"""kbtails bwrap shim (FLATPAK_BWRAP) v2.
+v0.4 had to rewrite flatpak's bubblewrap arguments (bind the container /proc, drop --unshare-pid and --disable-userns) because Docker's masked
+/proc paths make a fresh procfs impossible for a nested user namespace. v0.5 runs under the Docker runtime "kb-tails" (host/kb-runc), which empties
+maskedPaths/readonlyPaths for this confined container only, so flatpak's ORIGINAL arguments work unchanged: own user, mount, PID and IPC namespace,
+fresh procfs, --disable-userns. This shim now only VERIFIES that: if /proc still has Docker's over-mounts it refuses to start the sandbox (fail closed)
+unless KB_ALLOW_DEGRADED=1 is set (never set by the workspace). It never rewrites arguments."""
 import os, sys
 REAL = "/usr/bin/bwrap"
-def rewrite(a):
-    out = []; i = 0
-    while i < len(a):
-        if a[i] == "--proc" and i + 1 < len(a): out += ["--bind", "/proc", a[i + 1]]; i += 2; continue
-        if a[i] in ("--unshare-pid", "--disable-userns"): i += 1; continue
-        out.append(a[i]); i += 1
-    return out
-argv = sys.argv[1:]
-if "--args" in argv:
-    k = argv.index("--args"); fd = int(argv[k + 1])
-    data = b""
-    while True:
-        c = os.read(fd, 65536)
-        if not c: break
-        data += c
-    items = [x.decode() for x in data.split(b"\0") if x != b""]
-    items = rewrite(items)
-    r, w = os.pipe(); os.write(w, b"\0".join(x.encode() for x in items) + b"\0"); os.close(w)
-    os.set_inheritable(r, True)
-    argv[k + 1] = str(r)
-    os.execv(REAL, [REAL] + argv)
-os.execv(REAL, [REAL] + rewrite(argv))
+def proc_masked():
+    try:
+        for ln in open("/proc/self/mountinfo"):
+            mp = ln.split()[4]
+            if mp.startswith("/proc/"): return True
+    except Exception: return True
+    return False
+if proc_masked() and os.environ.get("KB_ALLOW_DEGRADED") != "1":
+    sys.stderr.write("kb-bwrap: /proc is masked (runtime kb-tails not applied); refusing to start the browser sandbox without its PID namespace\n"); sys.exit(125)
+os.execv(REAL, [REAL] + sys.argv[1:])
