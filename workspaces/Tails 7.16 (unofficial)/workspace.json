@@ -1,5 +1,5 @@
 {
-  "description": "UNOFFICIAL container adapted from the root filesystem of a Tails 7.16 ISO. NOT Tails and not security-equivalent: no Tails kernel, no memory wipe on shutdown, no MAC anonymisation, X11 under KasmVNC instead of Wayland, shared host kernel. Application traffic can only leave through a separate Tor gateway container (own Tor, obfs4 bridges, destination policy, per-desktop circuit isolation, filtered control port); direct internet, DNS, IPv6, LAN and other desktops are unreachable. Tails' own Tor Browser runs in its bubblewrap sandbox with its own user/mount/PID namespace (Docker runtime kb-tails, AppArmor-compensated). Optional private saved profile via Kasm Persistent Profile (Enabled/Disabled/Reset; not encrypted at rest, not Tails Persistent Storage); real Lock Screen menu entry. LOCAL IMAGE: must be preloaded on the Kasm agent host (not downloadable); requires the kbtails_int network, the kbtails-tor-gw gateway and kbtails-kasm-relay containers, the kb-tails AppArmor profile, the kb-tails Docker runtime and the kbtails-isolation nftables table (see the repository recipe).",
+  "description": "UNOFFICIAL container adapted from the owner's Tails 7.16 ISO root filesystem; NOT Tails and not security-equivalent (no Tails kernel, no memory wipe or MAC anonymisation, X11 under KasmVNC instead of Wayland, Flatpak browser sandbox with its own user/mount/PID namespace under the kb-tails runtime). Application traffic can only leave through a separate Tor gateway container (obfs4 bridges, destination policy, per-desktop circuit isolation, filtered control port); direct internet, DNS, LAN, IPv6 and peer desktops are unreachable. Saved profile is OPTIONAL and is chosen at launch (Kasm Persistent Profile selector; Kasm lists Enabled first and remembers nothing for you, so choose deliberately): Disabled = disposable home, the saved profile is neither read nor written; Enabled = your private saved profile (a plain directory on the Kasm host, per user and per workspace; NOT encrypted at rest and not Tails' Persistent Storage); Reset = clear your saved profile for this workspace and start empty. A second concurrent session on the same saved profile is refused. Lock Screen menu entry = X11 grab-based locker, not PAM. /data and /share are denied inside this workspace. Local image (preload required).",
   "docker_registry": "",
   "image_src": "tails-unofficial.svg",
   "run_config": {
@@ -22,17 +22,17 @@
     "Privacy",
     "Desktop"
   ],
-  "friendly_name": "Tails 7.16 container (UNOFFICIAL, from owner's ISO)",
+  "friendly_name": "Tails 7.16 container (UNOFFICIAL, adapted from the owner's ISO)",
   "architecture": [
     "amd64"
   ],
   "compatibility": [
     {
       "version": "1.19.x",
-      "image": "ghcr.io/daledibbadel/tails-unofficial:0.8",
+      "image": "ghcr.io/daledibbadel/tails-unofficial:0.11",
       "uncompressed_size_mb": 9350,
       "available_tags": [
-        "0.8"
+        "0.11"
       ]
     }
   ]
