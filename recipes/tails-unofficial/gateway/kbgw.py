@@ -198,6 +198,8 @@ class Up:
         self.circ_owner = {}     # circuit id -> owner ip
         self.circ_closed = set()
         self.version = "0.4"
+        self.abandoned = 0
+        self.cache = {}          # (key) -> (time, reply lines) for ns/id and ip-to-country
 
     async def connect(self):
         while True:
@@ -237,8 +239,8 @@ class Up:
                 log("upstream control closed"); os._exit(3)
             t = line.decode("latin1").rstrip("\r\n")
             if data:
+                cur.append(t)                      # v0.9: keep the "." terminator so a data reply can be re-framed exactly (the missing "." froze stem clients)
                 if t == ".": data = False
-                else: cur.append(t)
                 continue
             if t.startswith("650"):
                 self.event(t); continue
@@ -246,15 +248,23 @@ class Up:
                 cur.append(t); data = True; continue
             cur.append(t)
             if re.match(r"^\d{3} ", t):
-                if self.waiter and not self.waiter.done():
+                if self.abandoned > 0:             # late answer to a command we already answered with an error: discard it
+                    self.abandoned -= 1
+                elif self.waiter and not self.waiter.done():
                     self.waiter.set_result(cur)
                 cur = []
 
-    async def cmd(self, c):
+    async def cmd(self, c, timeout=8):
+        """One upstream command; always returns a reply list (a synthetic 551 on timeout, never raising)."""
         async with self.lock:
             self.waiter = asyncio.get_event_loop().create_future()
             self.w.write(c.encode() + b"\r\n"); await self.w.drain()
-            return await asyncio.wait_for(self.waiter, 20)
+            try:
+                return await asyncio.wait_for(self.waiter, timeout)
+            except asyncio.TimeoutError:
+                self.abandoned += 1
+                log("upstream timeout for", c.split(" ")[0])
+                return ["551 Tor did not answer in time"]
 
     def owner_of(self, line):
         m = re.search(r'SOCKS_USERNAME="([^"]*)"', line)
@@ -422,7 +432,7 @@ class Client:
             r = await UP.cmd("GETINFO " + key)
             lines = []
             for ln in r:
-                if ln.startswith("250 ") or not ln.strip():
+                if ln.startswith("250 ") or not ln.strip() or ln == ".":
                     continue
                 if ln[:4] in ("250-", "250+"):     # single-entry answers come as "250-key=<entry>"
                     ln = ln.partition("=")[2]
@@ -442,8 +452,16 @@ class Client:
             return True
         m = re.fullmatch(r"ns/id/[0-9A-Fa-f]{40}", key) or re.fullmatch(r"ip-to-country/\d+\.\d+\.\d+\.\d+", key)
         if m:
-            r = await UP.cmd("GETINFO " + key)
-            for ln in r[:-1]:
+            now = time.time(); hit = UP.cache.get(key)
+            if hit and now - hit[0] < 300:
+                r = hit[1]
+            else:
+                r = await UP.cmd("GETINFO " + key)
+                if r[-1].startswith("250 OK"):
+                    UP.cache[key] = (now, r)
+                    if len(UP.cache) > 512:
+                        for k in sorted(UP.cache, key=lambda k: UP.cache[k][0])[:128]: UP.cache.pop(k, None)
+            for ln in r[:-1]:                     # data replies keep their "250+key=" ... "." framing
                 self.send(ln)
             if not r[-1].startswith("250 OK"):
                 self.send(r[-1]); return False
