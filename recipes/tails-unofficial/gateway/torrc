@@ -11,6 +11,8 @@ DNSPort @LISTEN@:53
 AutomapHostsOnResolve 1
 AutomapHostsSuffixes .exit,.onion
 AvoidDiskWrites 1
+# NOTE: kbgw.py resolves names through Tor itself and connects to the verified address (no resolve/connect race), so Tor logs the informational
+# warning 'Your application (using socks5 ...) is giving Tor only an IP address' for clear-net streams: expected, not a leak (the option that silenced it is obsolete)
 SafeLogging 1
 Log notice stdout
 UseBridges 1
