@@ -1,0 +1,7 @@
+[Unit]
+Description=Ensure the UNOFFICIAL Tails gateway, Kasm relay and peer isolation exist
+After=docker.service network-online.target
+Wants=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kbtails-ensure
