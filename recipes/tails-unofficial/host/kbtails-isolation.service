@@ -1,0 +1,11 @@
+[Unit]
+Description=kbtails peer isolation (nftables bridge table for the Tails workspace network)
+After=docker.service
+Wants=docker.service
+[Service]
+Type=simple
+ExecStartPre=/usr/local/sbin/kbtails-isolation apply
+ExecStart=/bin/bash -c 'while true; do docker events --since 0s --filter type=network --filter event=connect --filter event=disconnect --format x | while read -r _; do sleep 1; /usr/local/sbin/kbtails-isolation apply; done; sleep 5; done'
+Restart=always
+[Install]
+WantedBy=multi-user.target
