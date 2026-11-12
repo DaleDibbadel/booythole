@@ -1,0 +1,53 @@
+#!/usr/bin/python3 -I
+"""kb-lock: real in-session screen lock for the UNOFFICIAL Tails container (Tails menu "Lock Screen" runs tails-screen-locker -> this).
+GNOME's lock needs GDM + a PAM login, which a container does not have. This locker asks for a passphrase chosen at lock time (kept only as an scrypt
+hash in this process' memory, never on disk), then covers every screen with a window that holds the keyboard and pointer grab until the passphrase is
+entered again. Failed attempts are delayed (2^n s, max 30 s). It does not replace Kasm's own authentication: the session is only reachable by its
+authenticated owner, and Kasm's idle disconnect / login lifetime still force re-authentication on resume."""
+import hashlib, hmac, os, secrets, sys, time, fcntl
+import gi
+gi.require_version("Gtk", "3.0"); gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
+lk = open("/tmp/.kb-lock.pid", "a+")
+try: fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError: sys.exit(0)           # already locked / dialog open
+def h(p, salt): return hashlib.scrypt(p.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+salt = secrets.token_bytes(16); stored = None
+def ask_new():
+    d = Gtk.Dialog(title="Lock screen", flags=Gtk.DialogFlags.MODAL); d.set_keep_above(True)
+    d.add_button("Cancel", Gtk.ResponseType.CANCEL); ok = d.add_button("Lock", Gtk.ResponseType.OK); ok.set_sensitive(False)
+    b = d.get_content_area(); b.set_spacing(6); b.set_border_width(12)
+    b.add(Gtk.Label(label="Choose a passphrase to unlock this session (not stored on disk; min. 8 characters)."))
+    e1, e2 = Gtk.Entry(), Gtk.Entry()
+    for e in (e1, e2): e.set_visibility(False); e.set_activates_default(True); b.add(e)
+    e1.set_placeholder_text("Passphrase"); e2.set_placeholder_text("Repeat passphrase")
+    def chg(*_): ok.set_sensitive(len(e1.get_text()) >= 8 and e1.get_text() == e2.get_text())
+    e1.connect("changed", chg); e2.connect("changed", chg); ok.set_can_default(True); ok.grab_default(); d.show_all()
+    r = d.run(); p = e1.get_text(); d.destroy(); return p if r == Gtk.ResponseType.OK else None
+pw = ask_new()
+if not pw: sys.exit(1)
+stored = h(pw, salt); pw = None
+win = Gtk.Window(type=Gtk.WindowType.POPUP); win.set_keep_above(True); win.set_decorated(False)
+scr = Gdk.Screen.get_default(); win.move(0, 0); win.set_default_size(scr.get_width(), scr.get_height())
+win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0, 0, 0, 1))
+box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); box.set_halign(Gtk.Align.CENTER); box.set_valign(Gtk.Align.CENTER)
+msg = Gtk.Label(); msg.set_markup('<span foreground="white" size="x-large">Session locked</span>')
+ent = Gtk.Entry(); ent.set_visibility(False); ent.set_placeholder_text("Passphrase"); ent.set_width_chars(28)
+st = Gtk.Label(); box.add(msg); box.add(ent); box.add(st); win.add(box)
+fails = [0]; busy = [False]
+def try_unlock(*_):
+    if busy[0]: return
+    cand = ent.get_text(); ent.set_text("")
+    if hmac.compare_digest(h(cand, salt), stored): Gtk.main_quit(); return
+    fails[0] += 1; wait = min(2 ** fails[0], 30); busy[0] = True; ent.set_sensitive(False)
+    st.set_markup(f'<span foreground="#ff6b6b">Wrong passphrase. Wait {wait} s.</span>')
+    def done(): busy[0] = False; ent.set_sensitive(True); ent.grab_focus(); st.set_text(""); return False
+    GLib.timeout_add_seconds(wait, done)
+ent.connect("activate", try_unlock)
+def regrab():
+    seat = Gdk.Display.get_default().get_default_seat(); gw = win.get_window()
+    if gw is not None: seat.grab(gw, Gdk.SeatCapabilities.ALL, True, None, None, None)
+    win.present(); return True
+win.show_all(); win.fullscreen(); ent.grab_focus()
+GLib.timeout_add(500, regrab)
+Gtk.main()
