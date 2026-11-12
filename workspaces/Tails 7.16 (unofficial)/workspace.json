@@ -29,10 +29,10 @@
   "compatibility": [
     {
       "version": "1.19.x",
-      "image": "ghcr.io/daledibbadel/tails-unofficial:0.11",
+      "image": "ghcr.io/daledibbadel/tails-unofficial:0.12",
       "uncompressed_size_mb": 9350,
       "available_tags": [
-        "0.11"
+        "0.12"
       ]
     }
   ]
