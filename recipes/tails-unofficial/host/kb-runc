@@ -1,0 +1,45 @@
+#!/usr/bin/python3 -I
+"""kb-runc: OCI runtime wrapper registered with Docker as runtime "kb-tails" (UNOFFICIAL Tails container).
+
+Why: the Tails Tor Browser sandbox (bubblewrap) needs a fresh procfs inside a nested PID namespace. The kernel refuses that while
+Docker's default maskedPaths/readonlyPaths over-mounts exist under /proc ("mount_too_revealing"). The Docker Engine API has
+HostConfig.MaskedPaths/ReadonlyPaths, but Kasm's agent (docker-py 7.1.0) cannot send them. A runtime wrapper is the Docker-supported
+extension point (the same pattern as nvidia-container-runtime): it edits the OCI spec of containers that select this runtime, then runs runc.
+
+Scope and fail-closed rules (only the `create` / `run` subcommands are touched; everything else is passed through unchanged):
+  * the edit is made ONLY when the spec is confined by AppArmor profile "kb-tails", has noNewPrivileges and a seccomp filter,
+    runs as a non-root user, is not privileged (no CAP_SYS_ADMIN in the effective/permitted sets), and has the env marker KB_TAILS_RUNTIME=1;
+  * otherwise the container is NOT started (exit 1) - no silent unmasked fallback;
+  * only linux.maskedPaths and linux.readonlyPaths are emptied; nothing else (mounts, namespaces, caps, devices) changes.
+Compensating controls (verified at runtime by kb-sbx-test): AppArmor kb-tails denies the formerly masked/read-only paths, uid != 0, no caps."""
+import json, os, sys
+REAL = "/usr/bin/runc"
+a = sys.argv[1:]
+sub = None; bundle = None; i = 0
+while i < len(a):
+    x = a[i]
+    if x in ("create", "run") and sub is None: sub = x
+    if x in ("--bundle", "-b") and i + 1 < len(a): bundle = a[i + 1]; i += 1
+    elif x.startswith("--bundle="): bundle = x.split("=", 1)[1]
+    i += 1
+if sub in ("create", "run") and bundle:
+    p = os.path.join(bundle, "config.json")
+    try:
+        spec = json.load(open(p))
+        proc = spec.get("process", {}); lin = spec.get("linux", {})
+        caps = proc.get("capabilities", {})
+        eff = set(caps.get("effective", [])) | set(caps.get("permitted", []))
+        env = proc.get("env", [])
+        checks = {"apparmor=kb-tails": proc.get("apparmorProfile") == "kb-tails", "noNewPrivileges": proc.get("noNewPrivileges") is True,
+                  "seccomp": bool(lin.get("seccomp")), "non-root-user": proc.get("user", {}).get("uid", 0) != 0,
+                  "no CAP_SYS_ADMIN": "CAP_SYS_ADMIN" not in eff, "env marker": "KB_TAILS_RUNTIME=1" in env}
+        bad = [k for k, v in checks.items() if not v]
+        if bad:
+            sys.stderr.write("kb-runc: refusing to start; unmet: " + ", ".join(bad) + "\n"); sys.exit(1)
+        lin["maskedPaths"] = []; lin["readonlyPaths"] = []
+        spec["linux"] = lin
+        tmp = p + ".kb"; json.dump(spec, open(tmp, "w")); os.replace(tmp, p)
+    except SystemExit: raise
+    except Exception as e:
+        sys.stderr.write(f"kb-runc: spec edit failed: {e}\n"); sys.exit(1)
+os.execv(REAL, [REAL] + a)
