@@ -8,11 +8,15 @@ def query(host="127.0.0.1", port=9051, timeout=4):
         s = socket.create_connection((host, port), timeout); s.settimeout(timeout)
         f = s.makefile("rwb", buffering=0)
         def cmd(c):
-            f.write(c.encode() + b"\r\n"); out = []
+            f.write(c.encode() + b"\r\n"); out = []; multi = False
             while True:
                 ln = f.readline().decode().rstrip("\r\n")
                 if not ln: raise IOError("closed")
                 out.append(ln)
+                if multi:                                  # data reply "250+key=" ... "." (circuit lines also start with 3 digits)
+                    if ln == ".": multi = False
+                    continue
+                if re.match(r"^\d{3}\+", ln): multi = True; continue
                 if re.match(r"^\d{3} ", ln): return out
         cmd("AUTHENTICATE")
         b = " ".join(cmd("GETINFO status/bootstrap-phase"))
