@@ -17,6 +17,12 @@ profile kb-tails flags=(attach_disconnected,mediate_deleted) {
   deny @{PROC}/sys/u[^s]** w,
   deny @{PROC}/sys/us[^e]** w,
   deny @{PROC}/sys/use[^r]** w,
+  # Kasm's group-level volume mapping (All Users) adds /data (per-user persistent) and /share (shared by every session) to EVERY workspace; this workspace
+  # must not read or write either, so the Tails-style disposable session cannot leak to or persist in them
+  deny /data/** rwklmx,
+  deny /share/** rwklmx,
+  deny /data/ rwklmx,
+  deny /share/ rwklmx,
   deny @{PROC}/sysrq-trigger rwklx,
   deny @{PROC}/kcore rwklx,
   deny /sys/[^f]*/** wklx,
@@ -27,7 +33,8 @@ profile kb-tails flags=(attach_disconnected,mediate_deleted) {
   deny /sys/firmware/** rwklx,
   deny /sys/devices/virtual/powercap/** rwklx,
   deny /sys/kernel/security/** rwklx,
-  ptrace (trace,read,tracedby,readby) peer=kb-tails,
+  # no ptrace between processes of this container (the desktop has no debugger use); reading peer /proc entries stays allowed
+  ptrace (read,readby) peer=kb-tails,
   signal (receive) peer=unconfined,
   signal (send,receive) peer=kb-tails,
 }
