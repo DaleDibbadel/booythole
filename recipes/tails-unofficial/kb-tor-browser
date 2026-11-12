@@ -1,7 +1,21 @@
 #!/bin/bash
 # Starts Tails' bundled Tor Browser (Flatpak org.boum.tails.TorBrowser) inside its bubblewrap sandbox, using the gateway Tor (SOCKS 9150 + filtered control 9051).
 export FLATPAK_FANCY_OUTPUT=0 XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp/xdg-run} DISPLAY=${DISPLAY:-:1}
-[ -d "$HOME/.tor-browser/profile.default" ] || /usr/local/lib/generate-tor-browser-profile
+# One writable profile, one session: custom_startup.sh holds an exclusive flock on $HOME/.kb-profile.lock for the whole session (persistent profiles live on a
+# shared host directory). If another session already holds it, refuse to start a second browser on the same profile.
+if [ -e /tmp/kb-profile-busy ]; then
+  python3 -I - <<'PY'
+import gi; gi.require_version("Gtk","3.0")
+from gi.repository import Gtk
+d=Gtk.MessageDialog(message_type=Gtk.MessageType.ERROR,buttons=Gtk.ButtonsType.CLOSE,text="Profile already in use")
+d.format_secondary_text("Another Tails session is using this saved profile. Close it first, or launch this workspace with the persistent profile Disabled."); d.run()
+PY
+  exit 1
+fi
+# A Firefox lock left by a crashed earlier session can only be stale when we hold the profile flock and no browser runs in this container.
+if ! pgrep -f 'firefox.real' >/dev/null 2>&1; then rm -f "$HOME/.tor-browser/profile.default/lock" "$HOME/.tor-browser/profile.default/.parentlock" 2>/dev/null; fi
+# flatpak creates an EMPTY ~/.tor-browser as a bind source on first sandbox use, and Tails' generator refuses to run when that directory exists: remove it only if empty
+[ -d "$HOME/.tor-browser/profile.default" ] || { rmdir "$HOME/.tor-browser" 2>/dev/null; /usr/local/lib/generate-tor-browser-profile; }
 # Tails' profile template links places.sqlite to /home/amnesia/.mozilla/firefox/bookmarks/ (Tails' persistent-bookmarks path). That path does not exist
 # here, so Firefox reported the bookmarks/history file as unusable. Use a session-private store inside the (disposable) home instead; nothing is deleted.
 BM="$HOME/.mozilla/firefox/bookmarks"; P="$HOME/.tor-browser/profile.default/places.sqlite"
