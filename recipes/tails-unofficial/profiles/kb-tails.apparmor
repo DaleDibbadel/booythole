@@ -25,6 +25,17 @@ profile kb-tails flags=(attach_disconnected,mediate_deleted) {
   deny /share/ rwklmx,
   deny @{PROC}/sysrq-trigger rwklx,
   deny @{PROC}/kcore rwklx,
+  # v0.5: the kb-tails Docker runtime (host/kb-runc) empties Docker's maskedPaths/readonlyPaths for this confined container so the browser sandbox can have its own
+  # PID namespace and procfs. These rules are the compensating control: every path Docker's default would have masked or made read-only stays unreadable/unwritable.
+  deny @{PROC}/{kmsg,mem,kmem,keys,timer_list,timer_stats,sched_debug,latency_stats} rwklx,
+  deny @{PROC}/acpi/ rwklx,
+  deny @{PROC}/acpi/** rwklx,
+  deny @{PROC}/scsi/ rwklx,
+  deny @{PROC}/scsi/** rwklx,
+  deny @{PROC}/{bus,fs,irq}/** wklx,
+  deny /sys/firmware/ rwklx,
+  deny /sys/kernel/security/ rwklx,
+  deny /sys/devices/virtual/powercap/ rwklx,
   deny /sys/[^f]*/** wklx,
   deny /sys/f[^s]*/** wklx,
   deny /sys/fs/[^c]*/** wklx,
