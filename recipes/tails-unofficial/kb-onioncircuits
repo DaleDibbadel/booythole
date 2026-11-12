@@ -1,0 +1,3 @@
+#!/bin/sh
+# Tails' wrapper needs sudo + a network namespace; here the circuit viewer talks to the gateway's FILTERED control port (own circuits only).
+exec env TOR_CONTROL_ADDRESS=127.0.0.1 TOR_CONTROL_PORT=9051 /usr/bin/onioncircuits "$@"
