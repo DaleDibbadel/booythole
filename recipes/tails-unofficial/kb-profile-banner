@@ -1,0 +1,11 @@
+#!/bin/bash
+# Makes the chosen Kasm persistent-profile mode VISIBLE inside the session: if /home/kasm-user is a separate mount (Kasm's volume-mounted persistent profile)
+# this session is "saved profile ENABLED", otherwise it is disposable. Also writes /tmp/kb-profile-mode for tests and kb-tca.
+sleep 6
+if awk '$5=="/home/kasm-user"{f=1} END{exit !f}' /proc/self/mountinfo; then
+  M=ENABLED; T="Saved profile: ENABLED"; B="Your home folder, browser profile, bookmarks and files in this session are saved to a private profile on the Kasm host and come back next time. They are NOT encrypted at rest by Kasm and this is not Tails' encrypted Persistent Storage. Launch with the profile Disabled for a disposable session, or Reset to start from an empty saved profile."
+else
+  M=DISABLED; T="Saved profile: DISABLED (disposable session)"; B="Everything in this session, including browser data and files, is deleted when the session ends. Nothing is read from or written to a saved profile."
+fi
+echo "$M" > /tmp/kb-profile-mode
+notify-send -u critical -t 0 -i dialog-information "$T" "$B" 2>/dev/null || true
