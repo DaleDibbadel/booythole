@@ -1,0 +1,14 @@
+#!/usr/bin/python3 -I
+"""Replacement for the Tails 'Tor Connection Assistant' launcher. In this container Tor does not run inside the desktop: it is run and configured by the
+Kasm-side gateway (bridges are built in; the desktop has no control over them). This shows the TRUE state read through the filtered control port."""
+import subprocess, sys
+sys.path.insert(0, "/etc/kb")
+import kbctl
+r = kbctl.query()
+if not r.get("ok"):
+    msg = "Tor is NOT reachable.\n\nThe desktop could not talk to the Tor gateway (%s).\nNo network traffic leaves this desktop except through Tor, so nothing will connect until the gateway is back.\nIt reconnects by itself; no bridge selection is needed." % r.get("error")
+elif r["progress"] < 100 or not r["circuit"]:
+    msg = "Tor is connecting: %d%% (%s).\nCircuit established: %s.\n\nTor and its bridges are run by the Kasm gateway, not by this desktop." % (r["progress"], r["summary"], "yes" if r["circuit"] else "no")
+else:
+    msg = "Connected to Tor (bootstrap 100%%, circuit established).\nYour desktop's open circuits: %d (see 'View Tor Circuits' for details).\n\nTor, the bridges and the connection settings are managed by the Kasm gateway (unofficial container: this replaces the Tails connection assistant).\nNew Identity in Tor Browser only affects this desktop's own circuits." % r["own_circuits"]
+subprocess.call(["zenity", "--info", "--no-wrap", "--title", "Tor connection (gateway)", "--text", msg])
