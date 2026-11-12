@@ -12,10 +12,11 @@ Prebuilt entries are Kasm's own official images for the same distribution as an 
 | Ubuntu 24.04 Noble (Bootyhole) | `kasmweb/ubuntu-noble-desktop:1.19.0-rolling-weekly` | Ubuntu 24.04.3 desktop | official Kasm image |
 | Kali Linux rolling (Bootyhole) | `kasmweb/kali-rolling-desktop:1.19.0-rolling-weekly` | Kali 2024.1 live | rolling release, newer than the ISO |
 | Fedora 42 desktop (Bootyhole) | `kasmweb/fedora-42-desktop:1.19.0-rolling-weekly` | Fedora Server 42 DVD | related desktop edition, not the Server ISO |
+| Tails 7.16 container (UNOFFICIAL, from owner's ISO) | `ghcr.io/daledibbadel/tails-unofficial:0.3` (LOCAL image, preload required) | Tails 7.16 ISO | **Not Tails.** Unprivileged container of the Tails root filesystem with Tor-only egress enforced by a separate gateway; reduced sandbox hardening. See `recipes/tails-unofficial/README.md`. |
 | Tor Browser (Bootyhole) | `kasmweb/tor-browser:1.19.0-rolling-weekly` | none | The Tor Browser. It is not Tails. Needs a bridge on networks that cannot reach Tor relays. |
 
 ## In progress (not published)
-Workspaces built from the owner's own ISO media (Tails, PeppermintOS, others) are unfinished. Nothing is listed until a custom image has been built from its source, launched through Kasm and tested. A registry lists Docker images; it cannot boot ISO files, run Windows, or provide Tails' kernel-level protections.
+Workspaces built from the owner's other ISO media (PeppermintOS, others) are unfinished (paused). Nothing is listed until a custom image has been built from its source, launched through Kasm and tested. A registry lists Docker images; it cannot boot ISO files, run Windows, or provide Tails' kernel-level protections.
 
 ## Build
 `./build.sh` (Node 20; `(cd processing && npm ci)` and `(cd site && npm ci)` first) stops on the first failure: image-reference self-test, catalog build, site export, then `node processing/verify.js` (names, icons, `1.19.x` compatibility, pinned image references under an allowed namespace, no private addresses or credential words). GitHub Actions publishes `public/` to `gh-pages` on every push to branch `1.1`.

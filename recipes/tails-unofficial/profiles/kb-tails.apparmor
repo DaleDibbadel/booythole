@@ -1,0 +1,33 @@
+#include <tunables/global>
+# kb-tails: docker-default derivative for the UNOFFICIAL Tails container. Differences from docker-default: `userns,` and `mount,`/`pivot_root,`
+# (so bubblewrap can build its nested sandbox in a user namespace); everything else is as docker-default.
+profile kb-tails flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  network,
+  capability,
+  file,
+  umount,
+  userns,
+  mount,
+  pivot_root,
+  # Docker-default hardening kept
+  deny @{PROC}/* w,
+  # /proc/sys writes denied except the per-user-namespace sysctls under /proc/sys/user (bubblewrap sets its own namespace's limit)
+  deny @{PROC}/sys/[^u]** w,
+  deny @{PROC}/sys/u[^s]** w,
+  deny @{PROC}/sys/us[^e]** w,
+  deny @{PROC}/sys/use[^r]** w,
+  deny @{PROC}/sysrq-trigger rwklx,
+  deny @{PROC}/kcore rwklx,
+  deny /sys/[^f]*/** wklx,
+  deny /sys/f[^s]*/** wklx,
+  deny /sys/fs/[^c]*/** wklx,
+  deny /sys/fs/c[^g]*/** wklx,
+  deny /sys/fs/cg[^r]*/** wklx,
+  deny /sys/firmware/** rwklx,
+  deny /sys/devices/virtual/powercap/** rwklx,
+  deny /sys/kernel/security/** rwklx,
+  ptrace (trace,read,tracedby,readby) peer=kb-tails,
+  signal (receive) peer=unconfined,
+  signal (send,receive) peer=kb-tails,
+}

@@ -1,0 +1,13 @@
+# UNOFFICIAL Tails container (adapted from a Tails 7.16 ISO root filesystem) for Kasm
+
+**This is not Tails.** It is the Tails 7.16 root filesystem (extracted from an ISO the owner holds) run as an unprivileged Docker container under KasmVNC.
+Not provided: the Tails kernel, memory wipe on shutdown, MAC anonymisation, Tails' firewall/netns/onion-grater, AppArmor policy set, Wayland (X11 under KasmVNC instead), the full Flatpak sandbox (see below). No claim of Tails support or security equivalence.
+
+## What is enforced
+- **Tor-only egress outside the desktop.** The desktop container sits on an *internal* Docker network (`kbtails_int`, no route out). A separate gateway container (`gateway/`, cap-drop ALL, read-only, `ip_forward=0`) holds the Tor client with the Tor Project's built-in obfs4 bridges and is the only peer; the desktop reaches only its SOCKS ports (9050/9062/9063/9150) and DNSPort. Direct internet, DNS, IPv6 and LAN access fail with "Network is unreachable", also at start-up, reconnect and when Tor is down. No Tor client runs in the desktop (no Tor-over-Tor).
+- **Tails' own Tor Browser** (Flatpak `org.boum.tails.TorBrowser`) runs under bubblewrap with: a per-container seccomp profile (Docker default plus `unshare/setns/mount/umount/umount2/pivot_root/clone/sethostname`), a per-container AppArmor profile `kb-tails` (docker-default derivative adding `userns`, `mount`, `pivot_root`), and an argument shim (`kb-bwrap`). The shim replaces `--proc X` by `--bind /proc X` and drops `--unshare-pid` and `--disable-userns`, because Docker's masked `/proc` cannot be lifted through Kasm's docker-py (no `systempaths=unconfined`). **Reduced sandbox hardening versus Tails:** no PID namespace and no userns lock-down inside the sandbox; X11 instead of Wayland. No privileged mode, capabilities, devices, host network or Docker socket.
+- Disposable home. Kasm adds `/data` (per-user, persists across sessions) and `/share` (shared by all sessions) bind mounts to every workspace; they are outside the sandboxed browser.
+
+## Install (local image: preload required, not downloadable)
+1. On the Kasm agent host: build the image from your own Tails rootfs (`Dockerfile` here builds on the imported rootfs image) and tag it `ghcr.io/daledibbadel/tails-unofficial:0.3`; start the gateway with `gateway/gw_up.sh` (creates the networks `kbtails_int`, `kbtails_eg` and the container `kbtails-tor-gw`); load `profiles/kb-tails.apparmor` with `apparmor_parser -r`.
+2. Add the registry workspace with Docker Registry left blank (local image); the image is protected from Kasm's pruner by the workspace reference and the running gateway container.

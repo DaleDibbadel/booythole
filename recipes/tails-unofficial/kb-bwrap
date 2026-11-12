@@ -1,0 +1,31 @@
+#!/usr/bin/python3
+"""kbtails bwrap shim (FLATPAK_BWRAP). Docker's masked /proc paths make 'mount a fresh procfs' impossible inside an unprivileged container
+(kernel mount_too_revealing), and Kasm's docker-py cannot unmask them. This shim rewrites flatpak's bubblewrap arguments:
+  --proc DEST        ->  --bind /proc DEST     (the container's own /proc)
+  --unshare-pid      ->  dropped               (a bind of the container's /proc is only coherent inside the container's PID namespace)
+  --disable-userns   ->  dropped               (it writes /proc/sys/user/max_user_namespaces, which Docker mounts read-only)
+Everything else (user and mount namespaces, IPC/UTS, seccomp, read-only runtime, filesystem permissions) is unchanged."""
+import os, sys
+REAL = "/usr/bin/bwrap"
+def rewrite(a):
+    out = []; i = 0
+    while i < len(a):
+        if a[i] == "--proc" and i + 1 < len(a): out += ["--bind", "/proc", a[i + 1]]; i += 2; continue
+        if a[i] in ("--unshare-pid", "--disable-userns"): i += 1; continue
+        out.append(a[i]); i += 1
+    return out
+argv = sys.argv[1:]
+if "--args" in argv:
+    k = argv.index("--args"); fd = int(argv[k + 1])
+    data = b""
+    while True:
+        c = os.read(fd, 65536)
+        if not c: break
+        data += c
+    items = [x.decode() for x in data.split(b"\0") if x != b""]
+    items = rewrite(items)
+    r, w = os.pipe(); os.write(w, b"\0".join(x.encode() for x in items) + b"\0"); os.close(w)
+    os.set_inheritable(r, True)
+    argv[k + 1] = str(r)
+    os.execv(REAL, [REAL] + argv)
+os.execv(REAL, [REAL] + rewrite(argv))

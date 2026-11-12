@@ -1,0 +1,10 @@
+#!/bin/bash
+# Starts Tails' bundled Tor Browser (Flatpak org.boum.tails.TorBrowser) inside its bubblewrap sandbox, using the gateway Tor.
+export FLATPAK_FANCY_OUTPUT=0 XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp/xdg-run} DISPLAY=${DISPLAY:-:1}
+[ -d "$HOME/.tor-browser/profile.default" ] || /usr/local/lib/generate-tor-browser-profile
+RT=/var/lib/flatpak-tails/runtime/org.boum.tails.Platform/x86_64/stable/active/files
+# Tails fills the pseudo-runtime with an overlay of /usr at boot (needs root); unprivileged equivalent: an outer user+mount namespace with /usr bind-mounted onto it
+export FLATPAK_BWRAP=/usr/local/bin/kb-bwrap
+exec bwrap --dev-bind / / --bind /usr "$RT" -- flatpak --installation=tails run --command=tor-browser \
+  --env=TOR_SKIP_LAUNCH=1 --env=TOR_SOCKS_HOST=127.0.0.1 --env=TOR_SOCKS_PORT=9150 --env=TOR_NO_DISPLAY_NETWORK_SETTINGS=1 \
+  org.boum.tails.TorBrowser "$@"
