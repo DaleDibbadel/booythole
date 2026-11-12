@@ -1,0 +1,19 @@
+#!/usr/bin/python3 -I
+"""Keeps /run/tor-has-bootstrapped/done truthful: present only while the gateway's Tor reports bootstrap 100% AND an established circuit
+(read through the filtered control port). Tails' own GNOME 'Tor status' extension and Tor Browser patches read that file."""
+import os, sys, time
+sys.path.insert(0, "/etc/kb")
+import kbctl
+D = "/run/tor-has-bootstrapped"; F = D + "/done"
+os.makedirs(D, exist_ok=True)
+last = None
+while True:
+    r = kbctl.query()
+    up = bool(r.get("ok") and r["progress"] == 100 and r["circuit"])
+    if up and not os.path.exists(F):
+        open(F, "w").close()
+    elif not up and os.path.exists(F):
+        os.unlink(F)
+    if up != last:
+        print(time.strftime("%H:%M:%S"), "tor ready" if up else f"tor NOT ready: {r}", flush=True); last = up
+    time.sleep(2 if not up else 5)
