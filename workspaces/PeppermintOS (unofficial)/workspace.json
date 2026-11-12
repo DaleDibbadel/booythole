@@ -1,0 +1,27 @@
+{
+  "description": "UNOFFICIAL PeppermintOS Debian 64 (bookworm, Xfce) desktop: the root filesystem of the owner's PeppermintOS-Debian-64.iso (no upstream checksum on record) with Kasm components added, run as an unprivileged container. It is not the ISO's kernel, installer or live session (the leftover 'Install Peppermint' desktop icon does nothing useful). Disposable home. LOCAL IMAGE: must be preloaded on the Kasm agent host (not downloadable); see the repository recipe.",
+  "docker_registry": "",
+  "image_src": "debian.svg",
+  "run_config": {
+    "hostname": "kasm"
+  },
+  "restrict_to_network": false,
+  "categories": [
+    "Desktop",
+    "Productivity"
+  ],
+  "friendly_name": "PeppermintOS (UNOFFICIAL, from the owner's ISO root filesystem)",
+  "architecture": [
+    "amd64"
+  ],
+  "compatibility": [
+    {
+      "version": "1.19.x",
+      "image": "ghcr.io/daledibbadel/peppermintos-unofficial:0.1",
+      "uncompressed_size_mb": 9300,
+      "available_tags": [
+        "0.1"
+      ]
+    }
+  ]
+}
