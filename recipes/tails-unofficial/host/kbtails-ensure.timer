@@ -1,0 +1,7 @@
+[Unit]
+Description=Re-check the UNOFFICIAL Tails gateway/relay every 5 minutes
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=5min
+[Install]
+WantedBy=timers.target
