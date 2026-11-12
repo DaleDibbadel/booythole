@@ -56,6 +56,7 @@ class Session:
         self.circs = set(); self.streams = {}
         self.closing = False
         self.reconn = None
+        self.was_up = False                 # True once a gateway connection existed: after that a down gateway is answered at once (no waiting)
 
     def to_client(self, line):
         try: self.cw.write(line.encode("latin1", "replace") + b"\r\n")
@@ -73,7 +74,7 @@ class Session:
                 if not a or not a[-1].startswith("250"): raise IOError("events refused")
         except Exception:
             w.close(); raise
-        self.up = (r, w); self.upv += 1
+        self.up = (r, w); self.upv += 1; self.was_up = True
         asyncio.get_event_loop().create_task(self.pump(r, self.upv))
 
     async def reconnect_loop(self):
@@ -171,7 +172,7 @@ class Session:
                 if line.upper().startswith("QUIT") :
                     self.to_client("250 closing connection"); await self.cw.drain(); break
                 t0 = time.time()
-                while self.up is None and time.time() - t0 < DOWN_WAIT: await asyncio.sleep(0.1)
+                while self.up is None and not self.was_up and time.time() - t0 < DOWN_WAIT: await asyncio.sleep(0.1)   # only a session that has never reached the gateway waits for the first connection
                 if self.up is None:
                     self.to_client("551 Tor gateway unavailable (reconnecting)")
                 else:
