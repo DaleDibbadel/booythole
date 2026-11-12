@@ -1,13 +1,20 @@
-FROM kbtails-proto:0.1
+FROM ghcr.io/daledibbadel/tails-unofficial:0.3
 USER root
 # Tails removes X11 from the Tor Browser flatpak (Wayland-only GNOME). Kasm's KasmVNC desktop is X11-only, so grant the X11 socket (documented difference)
-RUN sed -i 's/^sockets=!x11;!fallback-x11;cups/sockets=x11;cups/' /var/lib/flatpak/overrides/org.boum.tails.TorBrowser && grep -n '^sockets=' /var/lib/flatpak/overrides/org.boum.tails.TorBrowser
-COPY fwd.py /etc/kb/fwd.py
-COPY kb-tor-browser /usr/local/bin/kb-tor-browser
-COPY kb-bwrap /usr/local/bin/kb-bwrap
+RUN sed -i 's/^sockets=!x11;!fallback-x11;cups/sockets=x11;cups/' /var/lib/flatpak/overrides/org.boum.tails.TorBrowser
+COPY sbx_test.sh /usr/local/bin/kb-sbx-test
+COPY fwd.py kbctl.py /etc/kb/
+COPY kb-torstatus kb-tor-browser kb-bwrap kb-onioncircuits kb-tca /usr/local/bin/
 COPY custom_startup.sh /dockerstartup/custom_startup.sh
-RUN chmod 755 /usr/local/bin/kb-tor-browser /usr/local/bin/kb-bwrap /dockerstartup/custom_startup.sh && chown 1000:1000 /dockerstartup/custom_startup.sh
-# Tails' own launcher needs sudo, a network namespace (tbb), onion-grater and systemd; replace its last step with the unprivileged wrapper so the dock/menu Tor Browser entries work
-RUN ln -sf /usr/local/bin/kb-tor-browser /usr/local/lib/launch-tor-browser
+COPY gateway/kbgw.py gateway/torrc gateway/deny.conf /etc/kbgw-default/
+# /run/tor-has-bootstrapped is the readiness file Tails' GNOME Tor-status extension and Tor Browser read; kb-torstatus keeps it truthful
+RUN mkdir -p /run/tor-has-bootstrapped && chown 1000:1000 /run/tor-has-bootstrapped \
+ && chmod 755 /usr/local/bin/kb-* /dockerstartup/custom_startup.sh && chown 1000:1000 /dockerstartup/custom_startup.sh \
+ && ln -sf /usr/local/bin/kb-tor-browser /usr/local/lib/launch-tor-browser \
+ && ln -sf /usr/local/bin/kb-onioncircuits /usr/local/bin/onioncircuits \
+ && sed -i 's#^Exec=/bin/systemctl --user start tca#Exec=/usr/local/bin/kb-tca#' /usr/share/applications/tca.desktop && grep -n '^Exec=' /usr/share/applications/tca.desktop
+# GNOME screen lock needs a local login (GDM) that does not exist here: the lock UI only produced a misleading 'Screen Lock disabled' notice. The session is
+# protected by Kasm's own authentication (login, per-session token, idle disconnect, session time limit); do not offer a lock screen that cannot work.
+RUN printf '[org/gnome/desktop/screensaver]\nlock-enabled=false\nidle-activation-enabled=false\n\n[org/gnome/desktop/lockdown]\ndisable-lock-screen=true\n\n[org/gnome/desktop/session]\nidle-delay=uint32 0\n' > /etc/dconf/db/local.d/99_kb-session && dconf update && rm -f /usr/share/glib-2.0/schemas/90_kb-session.gschema.override
 LABEL org.opencontainers.image.title="UNOFFICIAL container adapted from the owner's Tails 7.16 ISO (experimental, not Tails)"
 USER 1000
