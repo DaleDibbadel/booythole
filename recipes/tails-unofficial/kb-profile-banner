@@ -8,4 +8,4 @@ else
   M=DISABLED; T="Saved profile: DISABLED (disposable session)"; B="Everything in this session, including browser data and files, is deleted when the session ends. Nothing is read from or written to a saved profile."
 fi
 echo "$M" > /tmp/kb-profile-mode
-notify-send -u critical -t 0 -i dialog-information "$T" "$B" 2>/dev/null || true
+notify-send -u normal -t 20000 -i dialog-information "$T" "$B" 2>/dev/null || true
